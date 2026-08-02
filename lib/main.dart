@@ -1,10 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart';
 
 import 'package:csahati_desktop/constants/app_constants.dart';
 import 'package:csahati_desktop/models.dart';
+import 'package:csahati_desktop/platform/window_setup.dart';
 import 'package:csahati_desktop/services/api_service.dart';
 import 'package:csahati_desktop/screens.dart';
 
@@ -12,15 +10,7 @@ final _api = ApiService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  if (Platform.isWindows) {
-    await windowManager.ensureInitialized();
-    await windowManager.setMinimumSize(const Size(900, 600));
-    await windowManager.setSize(const Size(1280, 800));
-    await windowManager.center();
-    await windowManager.setTitle('صحتي - التطبيق');
-  }
-
+  await setupDesktopWindow();
   runApp(const CsahatiApp());
 }
 

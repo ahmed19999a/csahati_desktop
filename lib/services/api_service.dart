@@ -189,7 +189,7 @@ class ApiService {
 }
 
 List<TemplateKind> _officialKinds() => [
-  TemplateKind.sickLeave, TemplateKind.driverCard1, TemplateKind.driverCard2,
+  TemplateKind.generic, TemplateKind.sickLeave, TemplateKind.driverCard1, TemplateKind.driverCard2,
   TemplateKind.healthAnnual, TemplateKind.healthFoodDelivery, TemplateKind.healthRiyadh, TemplateKind.healthSeasonal,
   TemplateKind.operationCard1, TemplateKind.operationCard2,
 ];
@@ -212,6 +212,8 @@ String _normalizePhone(String cc, String v) {
 Map<String, String> _fieldsForApi(TemplateKind type, Map<String, String> values) {
   final f = Map<String, String>.from(values);
   switch (type) {
+    case TemplateKind.generic:
+      break;
     case TemplateKind.sickLeave:
       f['leaveDays'] ??= f['leave_days'] ?? '1';
       f['leave_sector'] ??= f['sector_type'] ?? 'حكومي';

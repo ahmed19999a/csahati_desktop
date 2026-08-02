@@ -488,6 +488,13 @@ class EmptyState extends StatelessWidget {
 
 List<FieldSpec> fieldsFor(TemplateKind type) {
   switch (type) {
+    case TemplateKind.generic:
+      return [
+        const FieldSpec(key: 'name_ar', label: 'الاسم', kind: FieldKind.text),
+        const FieldSpec(key: 'identity_number', label: 'رقم الهوية', kind: FieldKind.text),
+        const FieldSpec(key: 'document_date', label: 'تاريخ المستند', kind: FieldKind.date),
+        const FieldSpec(key: 'notes', label: 'ملاحظات', kind: FieldKind.textarea, full: true),
+      ];
     case TemplateKind.sickLeave:
       return [
         FieldSpec(key: 'identity_number', label: 'رقم الهوية', kind: FieldKind.text),
@@ -579,4 +586,9 @@ List<FieldSpec> fieldsFor(TemplateKind type) {
         FieldSpec(key: 'request_type', label: 'نوع الطلب', kind: FieldKind.select, options: ['تجديد', 'إصدار', 'بدل فاقد']),
       ];
   }
+}
+
+List<FieldSpec> fieldsForTemplate(FormTemplate template) {
+  if (template.fields.isNotEmpty) return template.fields;
+  return fieldsFor(template.kind);
 }

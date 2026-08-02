@@ -7,6 +7,7 @@ enum AppScreen { list, form, preview, menuPage }
 enum MenuPage { reports, users, domains, payments, admin, services, request }
 
 enum TemplateKind {
+  generic,
   sickLeave,
   driverCard1,
   driverCard2,
@@ -171,6 +172,41 @@ class FieldSpec {
   final String value;
   final bool translate;
   final bool full;
+
+  factory FieldSpec.fromJson(Map<String, dynamic> json) {
+    return FieldSpec(
+      key: (json['key'] ?? json['field_key'] ?? json['name'] ?? '').toString(),
+      label: (json['label'] ?? json['title'] ?? json['name'] ?? '').toString(),
+      kind: fieldKindFromString((json['kind'] ?? json['type'] ?? 'text').toString()),
+      options: json['options'] is List
+          ? (json['options'] as List).map((item) => item.toString()).toList()
+          : const [],
+      value: (json['value'] ?? json['default'] ?? '').toString(),
+      translate: json['translate'] == true || json['auto_translate'] == true,
+      full: json['full'] == true || json['full_width'] == true,
+    );
+  }
+}
+
+FieldKind fieldKindFromString(String value) {
+  switch (value.trim().toLowerCase()) {
+    case 'select':
+    case 'dropdown':
+      return FieldKind.select;
+    case 'date':
+      return FieldKind.date;
+    case 'time':
+      return FieldKind.time;
+    case 'file':
+    case 'image':
+    case 'upload':
+      return FieldKind.file;
+    case 'textarea':
+    case 'multiline':
+      return FieldKind.textarea;
+    default:
+      return FieldKind.text;
+  }
 }
 
 class FormTemplate {
@@ -185,6 +221,7 @@ class FormTemplate {
     this.barcodeUrl = '',
     this.checkUrl = '',
     this.active = true,
+    this.fields = const [],
   });
 
   final String slug;
@@ -197,6 +234,7 @@ class FormTemplate {
   final String barcodeUrl;
   final String checkUrl;
   final bool active;
+  final List<FieldSpec> fields;
 
   TemplateKind get kind => _kindFromSlug(slug);
 
@@ -211,6 +249,13 @@ class FormTemplate {
         barcodeUrl: (json['barcode_url'] ?? '').toString(),
         checkUrl: (json['check_url'] ?? '').toString(),
         active: json['active'] != false,
+        fields: json['fields'] is List
+            ? (json['fields'] as List)
+                .whereType<Map>()
+                .map((item) => FieldSpec.fromJson(Map<String, dynamic>.from(item)))
+                .where((field) => field.key.isNotEmpty && field.label.isNotEmpty)
+                .toList()
+            : const [],
       );
 }
 
@@ -233,6 +278,7 @@ final runtimeTemplates = <String, FormTemplate>{
 
 String _docSlug(TemplateKind kind) {
   switch (kind) {
+    case TemplateKind.generic: return 'generic';
     case TemplateKind.sickLeave: return 'sick-leave';
     case TemplateKind.driverCard1: return 'driver-card-1';
     case TemplateKind.driverCard2: return 'driver-card-2';
@@ -257,7 +303,7 @@ TemplateKind _kindFromSlug(String slug) {
     case 'food-delivery-health-certificate': return TemplateKind.healthFoodDelivery;
     case 'riyadh-health-certificate': return TemplateKind.healthRiyadh;
     case 'seasonal-health-certificate': return TemplateKind.healthSeasonal;
-    default: return TemplateKind.sickLeave;
+    default: return TemplateKind.generic;
   }
 }
 

@@ -1,9 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:csahati_desktop/constants/app_constants.dart';
@@ -265,16 +261,8 @@ class _FilesScreenState extends State<FilesScreen> {
   Future<void> _downloadPdf(FileRecord file, {int fileIndex = 1}) async {
     try {
       final url = _api.documentPdfUrl(file, fileIndex: fileIndex);
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-        return;
-      }
-      final resp = await http.get(Uri.parse(url));
-      final dir = await getApplicationDocumentsDirectory();
-      final name = '${file.templateSlug}-${file.name}-$fileIndex.pdf'.replaceAll(RegExp(r'[\\/:*?"<>|]+'), '-');
-      final filePath = '${dir.path}/$name';
-      await File(filePath).writeAsBytes(resp.bodyBytes);
-      await launchUrl(Uri.file(filePath));
+      final launched = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (!launched) throw Exception('تعذر فتح رابط الملف');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحميل PDF: $e'), backgroundColor: appRed));
@@ -359,12 +347,12 @@ class _FormScreenState extends State<FormScreen> {
     if (widget.existingFile != null) {
       _values.addAll(widget.existingFile!.values);
     }
-    for (final f in fieldsFor(_template.kind)) {
+    for (final f in fieldsForTemplate(_template)) {
       _values.putIfAbsent(f.key, () => f.value);
     }
   }
 
-  List<FieldSpec> get _visibleFields => fieldsFor(_template.kind);
+  List<FieldSpec> get _visibleFields => fieldsForTemplate(_template);
   int get _completedCount => _visibleFields.where((f) => (_values[f.key] ?? '').trim().isNotEmpty).length;
 
   Future<void> _save() async {
@@ -460,7 +448,15 @@ class _FormScreenState extends State<FormScreen> {
           ...templates.map((t) => ListTile(
             title: Text(t.title), subtitle: Text(t.category, style: const TextStyle(fontSize: 12, color: Colors.grey)),
             trailing: _template.slug == t.slug ? const Icon(Icons.check, color: appBlue) : null,
-            onTap: () { setState(() => _template = t); Navigator.pop(ctx); },
+            onTap: () {
+              setState(() {
+                _template = t;
+                for (final field in fieldsForTemplate(_template)) {
+                  _values.putIfAbsent(field.key, () => field.value);
+                }
+              });
+              Navigator.pop(ctx);
+            },
           )),
         ]),
       ),
@@ -653,6 +649,7 @@ class MenuPageScreen extends StatelessWidget {
 
   IconData _templateIcon(TemplateKind kind) {
     switch (kind) {
+      case TemplateKind.generic: return Icons.description;
       case TemplateKind.sickLeave: return Icons.sick;
       case TemplateKind.driverCard1:
       case TemplateKind.driverCard2: return Icons.directions_car;
