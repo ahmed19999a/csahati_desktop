@@ -24,7 +24,7 @@ class CsahatiApp extends StatelessWidget {
       title: 'صحتي - التطبيق',
       theme: ThemeData(
         scaffoldBackgroundColor: appCanvas,
-        fontFamily: 'Arial',
+        fontFamily: 'NeoSansArabic',
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: appBlue),
       ),

@@ -63,9 +63,9 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.speed, size: 54, color: appBlue),
-            const SizedBox(height: 8),
-            const Text('المعقب السريع', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+            Image.asset('assets/images/logoall.png', width: 280, fit: BoxFit.contain),
+            const SizedBox(height: 14),
+            const Text('المعقب - السريع', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
             const SizedBox(height: 32),
             Container(
               padding: const EdgeInsets.all(24),
@@ -325,21 +325,9 @@ class _SideMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: [
       SizedBox(
-        height: 170,
+        height: 156,
         child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 68,
-                height: 68,
-                decoration: BoxDecoration(color: appBlue, borderRadius: BorderRadius.circular(14)),
-                child: const Icon(Icons.speed, color: Colors.white, size: 38),
-              ),
-              const SizedBox(width: 16),
-              const Text('المعقب\nالسريع', textAlign: TextAlign.right, style: TextStyle(color: Color(0xFF071657), fontSize: 27, height: 1.08, fontWeight: FontWeight.w900)),
-            ],
-          ),
+          child: Image.asset('assets/images/logoall.png', width: 210, fit: BoxFit.contain),
         ),
       ),
       const Divider(height: 1, thickness: 1, color: Colors.black),

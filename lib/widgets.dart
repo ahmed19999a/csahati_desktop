@@ -336,7 +336,7 @@ class _FormFieldBoxState extends State<FormFieldBox> {
             keyboardType: _keyboardType(f.key),
             inputFormatters: _inputFormatters(f.key),
             decoration: InputDecoration(
-              isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: appCardLine)),
               suffixIcon: widget.onTranslate != null
                   ? IconButton(icon: const Icon(Icons.translate, size: 22), onPressed: widget.onTranslate)
@@ -348,14 +348,14 @@ class _FormFieldBoxState extends State<FormFieldBox> {
           FieldKind.date => InkWell(
             onTap: () => _pickDate(context),
             child: IgnorePointer(child: TextField(
-              controller: _ctrl, decoration: InputDecoration(isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              controller: _ctrl, decoration: InputDecoration(isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: appCardLine)),
                 suffixIcon: const Icon(Icons.calendar_today, size: 20)),
             ))),
           FieldKind.time => InkWell(
             onTap: () => _pickTime(context),
             child: IgnorePointer(child: TextField(
-              controller: _ctrl, decoration: InputDecoration(isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              controller: _ctrl, decoration: InputDecoration(isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: appCardLine)),
                 suffixIcon: const Icon(Icons.access_time, size: 20)),
             ))),

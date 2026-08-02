@@ -29,3 +29,14 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/
+  fonts:
+    - family: NeoSansArabic
+      fonts:
+        - asset: assets/font/neosans_arabic.ttf
+        - asset: assets/font/neo_sans_arabic_ultra.ttf
+          weight: 900
+    - family: Effra
+      fonts:
+        - asset: assets/font/effra_regular.ttf
