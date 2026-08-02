@@ -1,4 +1,4 @@
-package com.csahati.desktop
+package site.csahati.app
 
 import io.flutter.embedding.android.FlutterActivity
 
