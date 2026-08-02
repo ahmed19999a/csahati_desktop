@@ -172,6 +172,7 @@ class _AppShellState extends State<AppShell> {
             setState(() { _activeFile = file; _screen = AppScreen.preview; });
           },
           onLogout: _handleLogout,
+          onRefresh: _loadData,
           onMenuPage: (page) {
             setState(() { _activeMenuPage = page; _screen = AppScreen.menuPage; });
           },

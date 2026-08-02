@@ -137,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
 class FilesScreen extends StatefulWidget {
   const FilesScreen({
     required this.bootstrap, required this.templates, required this.files,
-    required this.onAdd, required this.onEdit, required this.onView, required this.onLogout, required this.onMenuPage, super.key,
+    required this.onAdd, required this.onEdit, required this.onView, required this.onLogout, required this.onMenuPage, required this.onRefresh, super.key,
   });
   final AppBootstrap bootstrap;
   final List<FormTemplate> templates;
@@ -147,6 +147,7 @@ class FilesScreen extends StatefulWidget {
   final ValueChanged<FileRecord> onView;
   final VoidCallback onLogout;
   final ValueChanged<MenuPage> onMenuPage;
+  final VoidCallback onRefresh;
   @override
   State<FilesScreen> createState() => _FilesScreenState();
 }
@@ -170,6 +171,106 @@ class _FilesScreenState extends State<FilesScreen> {
       _DrawerItem(Icons.support_agent, 'طلب خدمة او اقتراح', () => widget.onMenuPage(MenuPage.request)),
       _DrawerItem(Icons.logout, 'تسجيل الخروج', widget.onLogout, isLogout: true),
     ];
+    final content = Column(children: [
+      MainHeader(
+        walletBalance: widget.bootstrap.walletBalance,
+        username: widget.bootstrap.currentUser?.name ?? 'الوكيل الرئيسي',
+        onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      const SizedBox(height: 20),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            ElevatedButton.icon(
+              onPressed: widget.onAdd,
+              icon: const Icon(Icons.add, size: 24),
+              label: const Text('إضافة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: appBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            const SizedBox(width: 18),
+            IconButton(
+              onPressed: widget.onRefresh,
+              icon: const Icon(Icons.refresh, color: appBlue, size: 30),
+              tooltip: 'تحديث',
+            ),
+            const Spacer(),
+            PeriodToggle(closed: _periodClosed, onChanged: (v) => setState(() => _periodClosed = v)),
+          ],
+        ),
+      ),
+      const SizedBox(height: 18),
+      if (_selected.isNotEmpty) ...[
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _bulkAction('تعطيل'),
+                icon: const Icon(Icons.cancel, color: Colors.white),
+                label: const Text('تعطيل', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF63F42), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _bulkAction('تمكين'),
+                icon: const Icon(Icons.check_circle, color: Colors.white),
+                label: const Text('تمكين', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF48AC4F), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              ),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 18),
+      ],
+      SummaryLine(total: widget.files.length, visible: widget.files.length),
+      const SizedBox(height: 20),
+      Expanded(
+        child: widget.files.isEmpty
+            ? const EmptyState(icon: Icons.folder_open, title: 'لا توجد ملفات', subtitle: 'اضغط على زر إضافة لإضافة ملف جديد')
+            : ListView.builder(
+                padding: EdgeInsets.symmetric(horizontal: MediaQuery.sizeOf(context).width > 900 ? 16 : 44),
+                itemCount: widget.files.length,
+                itemBuilder: (context, index) {
+                  final file = widget.files[index];
+                  final key = _selectionKey(file, index);
+                  return FileCard(
+                    file: file,
+                    selected: _selected.contains(key),
+                    onToggleSelected: (value) => setState(() {
+                      if (value) {
+                        _selected.add(key);
+                      } else {
+                        _selected.remove(key);
+                      }
+                    }),
+                    onEdit: () => widget.onEdit(file),
+                    onView: () => widget.onView(file),
+                    onDownload: (_) => widget.onView(file),
+                  );
+                },
+              ),
+      ),
+      const SizedBox(height: 10),
+      PaginationBar(count: 5, onMore: () {}),
+      const SizedBox(height: 24),
+    ]);
+
+    final sidebar = _SideMenu(
+      items: drawerItems,
+      onTap: (item) {
+        if (Scaffold.maybeOf(context)?.hasDrawer == true) Navigator.pop(context);
+        item.onTap();
+      },
+    );
+
     return Scaffold(
       key: _scaffoldKey,
       drawer: Drawer(
@@ -180,134 +281,21 @@ class _FilesScreenState extends State<FilesScreen> {
         child: SafeArea(
           child: Container(
             color: Colors.white,
-            child: Column(children: [
-              SizedBox(
-                height: 170,
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('المعقب\nالسريع', textAlign: TextAlign.right, style: TextStyle(color: Color(0xFF071657), fontSize: 26, height: 1.1, fontWeight: FontWeight.w900)),
-                      const SizedBox(width: 16),
-                      Container(
-                        width: 68,
-                        height: 68,
-                        decoration: const BoxDecoration(color: appBlue, shape: BoxShape.circle),
-                        child: const Icon(Icons.speed, color: Colors.white, size: 38),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Divider(height: 1, thickness: 1, color: Colors.black),
-              ...drawerItems.map((item) => _DrawerMenuTile(
-                item: item,
-                onTap: () {
-                  Navigator.pop(context);
-                  item.onTap();
-                },
-              )),
-            ]),
+            child: sidebar,
           ),
         ),
       ),
-      body: Column(children: [
-        MainHeader(
-          walletBalance: widget.bootstrap.walletBalance,
-          username: widget.bootstrap.currentUser?.name ?? 'الوكيل الرئيسي',
-          onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              ElevatedButton.icon(
-                onPressed: widget.onAdd,
-                icon: const Icon(Icons.add, size: 24),
-                label: const Text('إضافة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: appBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-              const Spacer(),
-              PeriodToggle(closed: _periodClosed, onChanged: (v) => setState(() => _periodClosed = v)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        if (_selected.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _bulkAction('تعطيل'),
-                  icon: const Icon(Icons.cancel, color: Colors.white),
-                  label: const Text('تعطيل', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF63F42), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _bulkAction('تمكين'),
-                  icon: const Icon(Icons.check_circle, color: Colors.white),
-                  label: const Text('تمكين', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF48AC4F), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                ),
-              ),
-            ]),
-          ),
-          const SizedBox(height: 18),
-        ],
-        SummaryLine(total: widget.files.length, visible: widget.files.length),
-        const SizedBox(height: 20),
-        Expanded(
-          child: widget.files.isEmpty
-              ? const EmptyState(icon: Icons.folder_open, title: 'لا توجد ملفات', subtitle: 'اضغط على زر إضافة لإضافة ملف جديد')
-              : ListView.builder(
-                  padding: EdgeInsets.symmetric(horizontal: MediaQuery.sizeOf(context).width > 900 ? 16 : 44),
-                  itemCount: widget.files.length,
-                  itemBuilder: (context, index) {
-                    final file = widget.files[index];
-                    final key = _selectionKey(file, index);
-                    return FileCard(
-                      file: file,
-                      selected: _selected.contains(key),
-                      onToggleSelected: (value) => setState(() {
-                        if (value) {
-                          _selected.add(key);
-                        } else {
-                          _selected.remove(key);
-                        }
-                      }),
-                      onEdit: () => widget.onEdit(file),
-                      onView: () => widget.onView(file),
-                      onDownload: (idx) => _downloadPdf(file, fileIndex: idx),
-                    );
-                  },
-                ),
-        ),
-        const SizedBox(height: 10),
-        PaginationBar(count: 5, onMore: () {}),
-        const SizedBox(height: 24),
-      ]),
+      body: LayoutBuilder(builder: (context, constraints) {
+        if (constraints.maxWidth >= 900) {
+          return Row(children: [
+            SizedBox(width: 252, child: sidebar),
+            const VerticalDivider(width: 1, color: Color(0xFFE5E7EB)),
+            Expanded(child: content),
+          ]);
+        }
+        return content;
+      }),
     );
-  }
-
-  Future<void> _downloadPdf(FileRecord file, {int fileIndex = 1}) async {
-    try {
-      final url = _api.documentPdfUrl(file, fileIndex: fileIndex);
-      await PdfActions.download(url);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحميل PDF: $e'), backgroundColor: appRed));
-      }
-    }
   }
 
   void _bulkAction(String action) {
@@ -325,6 +313,40 @@ class _DrawerItem {
   final VoidCallback onTap;
   final bool isLogout;
   _DrawerItem(this.icon, this.label, this.onTap, {this.isLogout = false});
+}
+
+class _SideMenu extends StatelessWidget {
+  const _SideMenu({required this.items, required this.onTap});
+
+  final List<_DrawerItem> items;
+  final ValueChanged<_DrawerItem> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      SizedBox(
+        height: 170,
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 68,
+                height: 68,
+                decoration: BoxDecoration(color: appBlue, borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.speed, color: Colors.white, size: 38),
+              ),
+              const SizedBox(width: 16),
+              const Text('المعقب\nالسريع', textAlign: TextAlign.right, style: TextStyle(color: Color(0xFF071657), fontSize: 27, height: 1.08, fontWeight: FontWeight.w900)),
+            ],
+          ),
+        ),
+      ),
+      const Divider(height: 1, thickness: 1, color: Colors.black),
+      ...items.map((item) => _DrawerMenuTile(item: item, onTap: () => onTap(item))),
+      const Spacer(),
+    ]);
+  }
 }
 
 class _DrawerMenuTile extends StatelessWidget {
