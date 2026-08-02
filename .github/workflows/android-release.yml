@@ -1,0 +1,50 @@
+name: Publish Android Release
+
+on:
+  push:
+    tags:
+      - 'android-v*'
+  workflow_dispatch:
+
+jobs:
+  release-android:
+    name: Build and Release Android
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.7'
+          channel: 'stable'
+
+      - name: Enable Android
+        run: flutter config --enable-android
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Build AAB
+        run: flutter build appbundle --release
+
+      - name: Rename artifacts
+        run: |
+          mkdir -p release
+          cp build/app/outputs/flutter-apk/app-release.apk release/csahati-android.apk
+          cp build/app/outputs/bundle/release/app-release.aab release/csahati-android.aab
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/csahati-android.apk
+            release/csahati-android.aab
+          generate_release_notes: true

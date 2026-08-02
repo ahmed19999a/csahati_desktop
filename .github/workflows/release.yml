@@ -1,0 +1,49 @@
+name: Publish Windows Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release-windows:
+    name: Build and Release Windows
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.7'
+          channel: 'stable'
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Rename executable
+        run: |
+          Rename-Item -Path "build\windows\x64\runner\Release\csahati_desktop.exe" -NewName "صحتي.exe"
+        shell: powershell
+
+      - name: Create zip package
+        run: |
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "build\windows\x64\runner\Release\csahati-windows.zip"
+        shell: powershell
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/windows/x64/runner/Release/csahati-windows.zip
+          generate_release_notes: true
