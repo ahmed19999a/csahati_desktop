@@ -177,6 +177,20 @@ class ApiService {
     return url;
   }
 
+  Future<String> uploadBytes(List<int> bytes, String fileName, String folder) async {
+    final req = http.MultipartRequest('POST', Uri.parse('$apiBase/uploads/media'));
+    req.files.add(http.MultipartFile.fromBytes('file', bytes, filename: fileName));
+    req.fields['folder'] = folder;
+    final stream = await req.send();
+    final resp = await http.Response.fromStream(stream);
+    final payload = jsonDecode(resp.body) as Map<String, dynamic>;
+    if (payload['ok'] != true || payload['file'] is! Map) throw Exception(payload['error'] ?? 'تعذر رفع الملف');
+    final saved = Map<String, dynamic>.from(payload['file'] as Map);
+    final url = (saved['url'] ?? '').toString();
+    if (url.isEmpty) throw Exception('لم يرجع رابط صالح.');
+    return url;
+  }
+
   String documentPdfUrl(FileRecord file, {int fileIndex = 1}) {
     if (file.id != null) return '$apiBase/documents/${file.id}/render?format=pdf&file=$fileIndex';
     return _absDeskUrl(file.pdfUrl);

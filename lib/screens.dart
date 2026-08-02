@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:csahati_desktop/constants/app_constants.dart';
 import 'package:csahati_desktop/models.dart';
 import 'package:csahati_desktop/services/api_service.dart';
+import 'package:csahati_desktop/services/pdf_actions.dart';
 import 'package:csahati_desktop/widgets.dart';
 
 final _api = ApiService();
@@ -152,7 +153,11 @@ class FilesScreen extends StatefulWidget {
 
 class _FilesScreenState extends State<FilesScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+  final Set<int> _selected = <int>{};
   bool _periodClosed = true;
+
+  int _selectionKey(FileRecord file, int index) => file.id ?? -index - 1;
+
   @override
   Widget build(BuildContext context) {
     final drawerItems = [
@@ -234,21 +239,57 @@ class _FilesScreenState extends State<FilesScreen> {
           ),
         ),
         const SizedBox(height: 18),
+        if (_selected.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _bulkAction('تعطيل'),
+                  icon: const Icon(Icons.cancel, color: Colors.white),
+                  label: const Text('تعطيل', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF63F42), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _bulkAction('تمكين'),
+                  icon: const Icon(Icons.check_circle, color: Colors.white),
+                  label: const Text('تمكين', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF48AC4F), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 18),
+        ],
         SummaryLine(total: widget.files.length, visible: widget.files.length),
         const SizedBox(height: 20),
         Expanded(
           child: widget.files.isEmpty
               ? const EmptyState(icon: Icons.folder_open, title: 'لا توجد ملفات', subtitle: 'اضغط على زر إضافة لإضافة ملف جديد')
-              : ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 44),
-                  children: [
-                    FileCard(
-                      file: widget.files.first,
-                      onEdit: () => widget.onEdit(widget.files.first),
-                      onView: () => widget.onView(widget.files.first),
-                      onDownload: (idx) => _downloadPdf(widget.files.first, fileIndex: idx),
-                    ),
-                  ],
+              : ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: MediaQuery.sizeOf(context).width > 900 ? 16 : 44),
+                  itemCount: widget.files.length,
+                  itemBuilder: (context, index) {
+                    final file = widget.files[index];
+                    final key = _selectionKey(file, index);
+                    return FileCard(
+                      file: file,
+                      selected: _selected.contains(key),
+                      onToggleSelected: (value) => setState(() {
+                        if (value) {
+                          _selected.add(key);
+                        } else {
+                          _selected.remove(key);
+                        }
+                      }),
+                      onEdit: () => widget.onEdit(file),
+                      onView: () => widget.onView(file),
+                      onDownload: (idx) => _downloadPdf(file, fileIndex: idx),
+                    );
+                  },
                 ),
         ),
         const SizedBox(height: 10),
@@ -261,13 +302,20 @@ class _FilesScreenState extends State<FilesScreen> {
   Future<void> _downloadPdf(FileRecord file, {int fileIndex = 1}) async {
     try {
       final url = _api.documentPdfUrl(file, fileIndex: fileIndex);
-      final launched = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      if (!launched) throw Exception('تعذر فتح رابط الملف');
+      await PdfActions.download(url);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحميل PDF: $e'), backgroundColor: appRed));
       }
     }
+  }
+
+  void _bulkAction(String action) {
+    final count = _selected.length;
+    setState(_selected.clear);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('تم تنفيذ $action على $count ملف'), backgroundColor: appBlue),
+    );
   }
 }
 
@@ -369,11 +417,15 @@ class _FormScreenState extends State<FormScreen> {
 
   Future<void> _uploadForField(FieldSpec field) async {
     if (_uploading) return;
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
     if (result == null || result.files.isEmpty) return;
     setState(() => _uploading = true);
     try {
-      final url = await _api.uploadFile(result.files.first.path!, field.key == 'photo' ? 'photo' : field.key);
+      final picked = result.files.first;
+      final folder = field.key == 'photo' ? 'photo' : field.key;
+      final url = picked.path != null
+          ? await _api.uploadFile(picked.path!, folder)
+          : await _api.uploadBytes(picked.bytes ?? const [], picked.name, folder);
       if (!mounted) return;
       setState(() => _values[field.key] = url);
     } catch (e) {
@@ -414,6 +466,7 @@ class _FormScreenState extends State<FormScreen> {
             Wrap(spacing: 14, runSpacing: 4, children: _visibleFields.map((f) => SizedBox(
               width: f.full ? double.infinity : 360,
               child: FormFieldBox(field: f, value: _values[f.key] ?? '', onChanged: (v) => setState(() => _values[f.key] = v),
+                onTranslate: _englishPairFor(f.key) == null ? null : () => _translateField(f),
                 onUpload: f.kind == FieldKind.file ? () => _uploadForField(f) : null, uploading: _uploading && f.kind == FieldKind.file),
             )).toList()),
             const SizedBox(height: 28),
@@ -463,6 +516,26 @@ class _FormScreenState extends State<FormScreen> {
     );
   }
 
+  String? _englishPairFor(String key) {
+    if (key.endsWith('_ar')) return '${key.substring(0, key.length - 3)}_en';
+    const pairs = {
+      'name': 'name_en',
+      'employer': 'employer_en',
+      'hospital': 'hospital_en',
+      'doctor': 'doctor_en',
+      'position': 'position_en',
+      'job': 'job_en',
+    };
+    return pairs[key];
+  }
+
+  void _translateField(FieldSpec field) {
+    final target = _englishPairFor(field.key);
+    if (target == null) return;
+    final translated = translateArabicText(_values[field.key] ?? '');
+    setState(() => _values[target] = translated);
+  }
+
   void _pickClient(BuildContext ctx) {
     showModalBottomSheet(
       context: ctx,
@@ -482,17 +555,34 @@ class _FormScreenState extends State<FormScreen> {
   }
 }
 
-class PreviewScreen extends StatelessWidget {
+class PreviewScreen extends StatefulWidget {
   const PreviewScreen({required this.file, required this.onBack, super.key});
   final FileRecord file;
   final VoidCallback onBack;
 
   @override
+  State<PreviewScreen> createState() => _PreviewScreenState();
+}
+
+class _PreviewScreenState extends State<PreviewScreen> {
+  bool _sharing = false;
+
+  @override
   Widget build(BuildContext context) {
-    final tpl = templateForSlug(file.templateSlug);
+    final file = widget.file;
     final thumbUrl = _api.documentThumbnailUrl(file);
     return Column(children: [
-      SubHeader(title: '${tpl.title} - ${file.name}', onBack: onBack),
+      Container(
+        color: const Color(0xFFF1F8FF),
+        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+        child: Row(children: [
+          IconButton(icon: const Icon(Icons.arrow_back, size: 28), onPressed: widget.onBack),
+          const SizedBox(width: 8),
+          const Expanded(child: Text('عرض الملف', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
+          IconButton(icon: const Icon(Icons.download, size: 24), onPressed: _download),
+          IconButton(icon: _sharing ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.share, size: 23), onPressed: _sharing ? null : _share),
+        ]),
+      ),
       Expanded(
         child: Center(
           child: InteractiveViewer(
@@ -513,6 +603,33 @@ class PreviewScreen extends StatelessWidget {
         ),
       ),
     ]);
+  }
+
+  Future<void> _download() async {
+    try {
+      await PdfActions.download(_api.documentPdfUrl(widget.file));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحميل الملف: $e'), backgroundColor: appRed));
+    }
+  }
+
+  Future<void> _share() async {
+    setState(() => _sharing = true);
+    try {
+      final name = '${widget.file.templateSlug}-${widget.file.name}.pdf'.replaceAll(RegExp(r'[\\/:*?"<>|]+'), '-');
+      await PdfActions.shareFile(
+        url: _api.documentPdfUrl(widget.file),
+        fileName: name,
+        text: templateForSlug(widget.file.templateSlug).title,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر مشاركة PDF كملف: $e'), backgroundColor: appRed));
+      }
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
   }
 }
 

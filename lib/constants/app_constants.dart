@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 const apiOrigin = 'https://app.csahati.site';
 const legacyDeskApiBase = 'https://desk.almaktb2.37.60.235.208.sslip.io/api/v1';
 const registryUrl = 'https://mang.csahati.site/api.php?action=registry';
-String get apiBase => legacyDeskApiBase;
-List<String> get loginApiBaseCandidates => [legacyDeskApiBase];
+String get apiBase => '$apiOrigin/api/v1';
+List<String> get loginApiBaseCandidates => [apiBase];
 
 const rememberLoginKey = 'csahati.remember_login';
 const rememberCountryKey = 'csahati.login_country';

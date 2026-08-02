@@ -69,8 +69,10 @@ class SubHeader extends StatelessWidget {
 }
 
 class FileCard extends StatelessWidget {
-  const FileCard({required this.file, this.onEdit, this.onView, this.onDownload, super.key});
+  const FileCard({required this.file, this.selected = false, this.onToggleSelected, this.onEdit, this.onView, this.onDownload, super.key});
   final FileRecord file;
+  final bool selected;
+  final ValueChanged<bool>? onToggleSelected;
   final VoidCallback? onEdit;
   final VoidCallback? onView;
   final void Function(int index)? onDownload;
@@ -122,11 +124,17 @@ class FileCard extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             InkWell(
-              onTap: onView,
-              child: Container(
+              onTap: () => onToggleSelected?.call(!selected),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
                 width: 28,
                 height: 28,
-                decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.black87, width: 2)),
+                decoration: BoxDecoration(
+                  color: selected ? appBlue : Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: selected ? appBlue : Colors.black87, width: 2),
+                ),
+                child: selected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
               ),
             ),
           ],
@@ -280,10 +288,11 @@ class ChoiceBox extends StatelessWidget {
 }
 
 class FormFieldBox extends StatefulWidget {
-  const FormFieldBox({required this.field, required this.value, required this.onChanged, this.onUpload, this.uploading = false, super.key});
+  const FormFieldBox({required this.field, required this.value, required this.onChanged, this.onTranslate, this.onUpload, this.uploading = false, super.key});
   final FieldSpec field;
   final String value;
   final ValueChanged<String> onChanged;
+  final VoidCallback? onTranslate;
   final VoidCallback? onUpload;
   final bool uploading;
 
@@ -329,10 +338,9 @@ class _FormFieldBoxState extends State<FormFieldBox> {
             decoration: InputDecoration(
               isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: appCardLine)),
-              suffixIcon: f.translate ? IconButton(icon: const Icon(Icons.translate, size: 22), onPressed: () {
-                _ctrl.text = translateArabicText(_ctrl.text);
-                widget.onChanged(_ctrl.text);
-              }) : null,
+              suffixIcon: widget.onTranslate != null
+                  ? IconButton(icon: const Icon(Icons.translate, size: 22), onPressed: widget.onTranslate)
+                  : null,
             ),
             onChanged: widget.onChanged,
           ),
